@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import API_BASE_URL from "../../config/api";
+
 
 function AdminProducts() {
   const navigate = useNavigate();
@@ -22,8 +24,8 @@ const loadProducts = async () => {
     }
 
     const response = await fetch(
-      "http://localhost:5000/api/products",
-      {
+  `${API_BASE_URL}/api/products`,
+  {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
@@ -80,8 +82,8 @@ const loadProducts = async () => {
     }
 
     const response = await fetch(
-      `http://localhost:5000/api/products/${product._id}`,
-      {
+  `${API_BASE_URL}/api/products/${product._id}`,
+  {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${adminToken}`,

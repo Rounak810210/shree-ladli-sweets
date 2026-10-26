@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_BASE_URL from "../../config/api";
 
 function AddProduct() {
   const navigate = useNavigate();
@@ -38,8 +39,8 @@ function AddProduct() {
     }
 
     const response = await fetch(
-      "http://localhost:5000/api/products",
-      {
+  `${API_BASE_URL}/api/products`,
+  {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

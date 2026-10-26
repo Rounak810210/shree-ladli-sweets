@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
+import API_BASE_URL from "../../config/api";
 function EditProduct() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -34,7 +34,7 @@ function EditProduct() {
         }
 
         const response = await fetch(
-          `http://localhost:5000/api/products/${id}`,
+          `${API_BASE_URL}/api/products/${id}`,
           {
             headers: {
               Authorization: `Bearer ${adminToken}`,
@@ -119,7 +119,7 @@ const handleSubmit = async (e) => {
     }
 
     const response = await fetch(
-      `http://localhost:5000/api/products/${id}`,
+     `${API_BASE_URL}/api/products/${id}`,
       {
         method: "PATCH",
         headers: {

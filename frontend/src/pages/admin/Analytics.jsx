@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API_BASE_URL from "../../config/api";
 
 function Analytics() {
   const [analytics, setAnalytics] = useState({
@@ -19,8 +20,8 @@ function Analytics() {
         const token = localStorage.getItem("adminToken");
 
         const response = await fetch(
-          "http://localhost:5000/api/orders/admin/analytics",
-          {
+  `${API_BASE_URL}/api/orders/admin/analytics`,
+  {
             headers: {
               Authorization: `Bearer ${token}`,
             },

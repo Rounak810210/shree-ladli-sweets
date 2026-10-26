@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API_BASE_URL from "../config/api";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -17,9 +18,9 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/forgot-password/send-otp",
-        {
+     const response = await fetch(
+  `${API_BASE_URL}/api/forgot-password/send-otp`,
+  {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

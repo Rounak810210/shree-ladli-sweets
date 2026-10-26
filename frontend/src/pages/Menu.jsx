@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
+import API_BASE_URL from "../config/api";
 
 const categories = [
   { name: "All", icon: "⭐" },
@@ -23,9 +24,9 @@ function Menu() {
         setLoading(true);
         setLoadError(false);
 
-        const response = await fetch(
-          "http://localhost:5000/api/products"
-        );
+       const response = await fetch(
+  `${API_BASE_URL}/api/products`
+);
 
         const data = await response.json();
 

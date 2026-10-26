@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import API_BASE_URL from "../config/api";
 
 function OrderConfirmation() {
   const navigate = useNavigate();
@@ -29,9 +30,9 @@ function OrderConfirmation() {
       if (showLoading) setLoading(true);
 
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/orders/${encodeURIComponent(orderId)}`,
-          {
+      const response = await fetch(
+  `${API_BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
+  {
             method: "GET",
             headers: {
               Authorization: `Bearer ${customerToken}`,

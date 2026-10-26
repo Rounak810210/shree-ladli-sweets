@@ -1,5 +1,7 @@
 
 import { useCallback, useEffect, useState } from "react";
+import API_BASE_URL from "../../config/api";
+
 
 function AdminOrders({ category }) {
   const [orders, setOrders] = useState([]);
@@ -94,9 +96,9 @@ function AdminOrders({ category }) {
     setError("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/orders/admin/all",
-        {
+     const response = await fetch(
+  `${API_BASE_URL}/api/orders/admin/all`,
+  {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -149,9 +151,9 @@ function AdminOrders({ category }) {
     setUpdating(orderId);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/orders/admin/${encodeURIComponent(orderId)}/status`,
-        {
+     const response = await fetch(
+  `${API_BASE_URL}/api/orders/admin/${encodeURIComponent(orderId)}/status`,
+  {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -190,7 +192,7 @@ function AdminOrders({ category }) {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/orders/admin/${encodeURIComponent(orderId)}/status`,
+        `${API_BASE_URL}/api/orders/admin/${encodeURIComponent(orderId)}/status`,
         {
           method: "PATCH",
           headers: {

@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_BASE_URL from "../../config/api";
 import {
   ResponsiveContainer,
   PieChart,
@@ -83,8 +84,8 @@ function AdminDashboard() {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/orders/admin/all",
-          {
+  `${API_BASE_URL}/api/orders/admin/all`,
+  {
             headers: {
               Authorization: `Bearer ${adminToken}`,
             },
