@@ -1,6 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  useSearchParams,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import API_BASE_URL from "../../config/api";
 
 function OrderDetails() {
   const [searchParams] = useSearchParams();
@@ -8,34 +13,92 @@ function OrderDetails() {
   const location = useLocation();
 
   const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const orderId = searchParams.get("orderId");
   const isAdmin = location.pathname.toLowerCase().includes("admin");
 
+  // Fetch order details from the backend
   useEffect(() => {
-    const loadOrder = () => {
+    let cancelled = false;
+
+    const loadOrder = async () => {
+      setLoading(true);
+      setError("");
+      setOrder(null);
+
+      if (!orderId) {
+        setError("No order ID was provided.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const savedOrders = JSON.parse(
-          localStorage.getItem("shreeLadliOrders") || "[]"
-        );
+        let token;
+        let endpoint;
 
-        const foundOrder = savedOrders.find(
-          (item) => String(item.orderId) === String(orderId)
-        );
+        if (isAdmin) {
+          token = localStorage.getItem("adminToken");
+          endpoint = `${API_BASE_URL}/api/orders/admin/${encodeURIComponent(
+            orderId
+          )}`;
+        } else {
+          token = localStorage.getItem("customerToken");
+          endpoint = `${API_BASE_URL}/api/orders/${encodeURIComponent(
+            orderId
+          )}`;
+        }
 
-        setOrder(foundOrder || null);
-      } catch (error) {
-        console.error("Error loading order:", error);
-        setOrder(null);
+        if (!token) {
+          throw new Error(
+            isAdmin
+              ? "Admin login required. Please log in again."
+              : "Customer login required. Please log in again."
+          );
+        }
+
+        const response = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Unable to load order details."
+          );
+        }
+
+        if (!cancelled) {
+          if (data.order) {
+            setOrder(data.order);
+          } else {
+            setError("The server did not return order details.");
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Error loading order details:", err);
+          setError(
+            err.message || "Unable to connect to the server."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadOrder();
 
-    const interval = setInterval(loadOrder, 3000);
-
-    return () => clearInterval(interval);
-  }, [orderId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, isAdmin]);
 
   const getPrice = (price) => {
     if (typeof price === "number") return price;
@@ -80,9 +143,17 @@ function OrderDetails() {
   };
 
   const getDepartmentStatus = (items) => {
-    const statuses = items.map((item) => item.status || "Pending");
+    if (!items.length) return "Pending";
 
-    if (statuses.every((itemStatus) => itemStatus === "Completed")) {
+    const statuses = items.map(
+      (item) => item.status || "Pending"
+    );
+
+    if (
+      statuses.every(
+        (itemStatus) => itemStatus === "Completed"
+      )
+    ) {
       return "Completed";
     }
 
@@ -97,12 +168,13 @@ function OrderDetails() {
     return "Pending";
   };
 
-  if (!order) {
+  // Loading and error states
+  if (loading || !order) {
     return (
       <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-md rounded-3xl border border-amber-100 bg-white p-7 sm:p-10 text-center shadow-xl">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-3xl">
-            📦
+            {loading ? "⏳" : "📦"}
           </div>
 
           <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-amber-700">
@@ -110,23 +182,30 @@ function OrderDetails() {
           </p>
 
           <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-[#651c25]">
-            Order Not Found
+            {loading
+              ? "Loading Order Details..."
+              : "Order Details Unavailable"}
           </h1>
 
-          <p className="mt-3 text-sm leading-relaxed text-gray-500">
-            We couldn't find this order in the saved order records.
-            Please return to your orders and try again.
-          </p>
+          {!loading && (
+            <>
+              <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                {error || "We couldn't find this order."}
+              </p>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate(isAdmin ? "/admin/orders" : "/my-orders")
-            }
-            className="mt-7 w-full rounded-xl bg-[#651c25] px-5 py-3 font-semibold text-white transition hover:bg-[#4a1019]"
-          >
-            {isAdmin ? "Back to Orders" : "Back to My Orders"}
-          </button>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    isAdmin ? "/admin/orders" : "/my-orders"
+                  )
+                }
+                className="mt-7 w-full rounded-xl bg-[#651c25] px-5 py-3 font-semibold text-white transition hover:bg-[#4a1019]"
+              >
+                {isAdmin ? "Back to Orders" : "Back to My Orders"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -175,7 +254,7 @@ function OrderDetails() {
   const items = Array.isArray(order.items) ? order.items : [];
 
   const subtotal =
-    order.subtotal !== undefined
+    order.subtotal !== undefined && order.subtotal !== null
       ? getPrice(order.subtotal)
       : items.reduce(
           (total, item) =>
@@ -187,7 +266,7 @@ function OrderDetails() {
   const deliveryCharge = getPrice(order.deliveryCharge || 0);
 
   const total =
-    order.total !== undefined
+    order.total !== undefined && order.total !== null
       ? getPrice(order.total)
       : subtotal + deliveryCharge;
 
@@ -212,7 +291,6 @@ function OrderDetails() {
   return (
     <div className="min-h-screen bg-[#fffaf0] px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-6xl">
-
         {/* Header */}
         <header className="mb-7 sm:mb-9 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -308,7 +386,9 @@ function OrderDetails() {
 
                   <p
                     className={`mt-3 text-sm font-bold ${
-                      isCompleted ? "text-[#651c25]" : "text-gray-500"
+                      isCompleted
+                        ? "text-[#651c25]"
+                        : "text-gray-500"
                     }`}
                   >
                     {step}
@@ -361,12 +441,10 @@ function OrderDetails() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{department.icon}</span>
-
                     <div>
                       <h3 className="font-bold text-gray-800">
                         {department.name}
                       </h3>
-
                       <p className="text-xs text-gray-500">
                         {departmentItems.length} item
                         {departmentItems.length !== 1 ? "s" : ""}
@@ -463,8 +541,8 @@ function OrderDetails() {
                           src={item.image}
                           alt={item.name || "Order item"}
                           className="h-20 w-20 shrink-0 rounded-xl border border-amber-100 object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
                           }}
                         />
                       ) : (
@@ -491,7 +569,6 @@ function OrderDetails() {
                     <div className="flex items-center justify-between gap-3 border-t border-amber-100 pt-3 sm:block sm:border-0 sm:pt-0 sm:text-right">
                       <div>
                         <p className="text-xs text-gray-500">Item Total</p>
-
                         <p className="mt-1 text-xl font-bold text-[#651c25]">
                           {formatCurrency(itemTotal)}
                         </p>
@@ -522,7 +599,6 @@ function OrderDetails() {
 
             <div className="rounded-xl bg-[#fffdf8] p-4">
               <p className={labelClass}>Payment Status</p>
-
               <span
                 className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-bold ${getStatusStyle(paymentStatus)}`}
               >
@@ -538,7 +614,6 @@ function OrderDetails() {
             <h2 className="text-xl sm:text-2xl font-bold text-white">
               Price Summary
             </h2>
-
             <p className="mt-1 text-sm text-amber-100">
               Final breakdown for your order
             </p>
@@ -565,7 +640,6 @@ function OrderDetails() {
                   <span className="text-lg font-bold text-[#651c25]">
                     Total Amount
                   </span>
-
                   <span className="text-2xl sm:text-3xl font-bold text-[#651c25]">
                     {formatCurrency(total)}
                   </span>
@@ -584,12 +658,10 @@ function OrderDetails() {
           <p className="text-sm font-semibold text-[#651c25]">
             Thank you for choosing Shree Ladli!
           </p>
-
           <p className="mt-1 text-xs text-gray-400">
             Freshness, quality and sweetness in every bite.
           </p>
         </footer>
-
       </div>
     </div>
   );

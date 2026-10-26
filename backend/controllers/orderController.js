@@ -1,3 +1,4 @@
+
 const Order = require("../models/Order");
 const Customer = require("../models/Customer");
 const sendEmail = require("../utils/sendEmail");
@@ -17,7 +18,6 @@ const createOrder = async (req, res) => {
       paymentStatus,
     } = req.body;
 
-    // Validate required fields
     if (
       !customer ||
       !customer.name ||
@@ -31,7 +31,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         message: "Order must contain at least one item",
       });
@@ -43,15 +43,11 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Generate unique order ID
     const orderId = `SL${Date.now()}`;
 
-    // Create order
     const order = await Order.create({
       orderId,
-
       customerId: req.customerId,
-
       customer: {
         name: customer.name,
         phone: customer.phone,
@@ -59,7 +55,6 @@ const createOrder = async (req, res) => {
         city: customer.city,
         pincode: customer.pincode,
       },
-
       items: items.map((item) => ({
         id: item.id,
         name: item.name,
@@ -70,37 +65,35 @@ const createOrder = async (req, res) => {
         image: item.image,
         status: "Pending",
       })),
-
       subtotal: Number(subtotal) || 0,
-
       deliveryCharge: Number(deliveryCharge) || 0,
-
       total: Number(total) || 0,
-
       paymentMethod,
-
       paymentStatus:
         paymentStatus ||
         (paymentMethod === "UPI Payment"
           ? "Verification Required"
           : "Pending"),
-
       status: "Pending",
     });
 
-   // Send order confirmation email
-try {
-  const customerAccount = await Customer.findById(req.customerId);
+    // Send order confirmation email
+    try {
+      const customerAccount = await Customer.findById(
+        req.customerId
+      );
 
-  if (customerAccount && customerAccount.email) {
-    const itemsList = order.items
-      .map(
-        (item) =>
-          `${item.name} x ${item.quantity} = ₹${item.price * item.quantity}`
-      )
-      .join("\n");
+      if (customerAccount?.email) {
+        const itemsList = order.items
+          .map(
+            (item) =>
+              `${item.name} x ${item.quantity} = ₹${
+                item.price * item.quantity
+              }`
+          )
+          .join("\n");
 
-    const emailText = `
+        const emailText = `
 Hello ${order.customer.name},
 
 Thank you for ordering from Shree Ladli Sweets & Snacks!
@@ -129,25 +122,27 @@ Thank you,
 Shree Ladli Sweets & Snacks
 `;
 
-    await sendEmail(
-      customerAccount.email,
-      `Order Confirmation - ${order.orderId}`,
-      emailText
-    );
-  }
-} catch (emailError) {
-  console.error("Order confirmation email failed:", emailError.message);
-}
+        await sendEmail(
+          customerAccount.email,
+          `Order Confirmation - ${order.orderId}`,
+          emailText
+        );
+      }
+    } catch (emailError) {
+      console.error(
+        "Order confirmation email failed:",
+        emailError.message
+      );
+    }
 
-// Return successful order response
-res.status(201).json({
-  message: "Order created successfully",
-  order,
-});
+    return res.status(201).json({
+      message: "Order created successfully",
+      order,
+    });
   } catch (error) {
     console.error("Create order error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -160,24 +155,20 @@ const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({
       customerId: req.customerId,
-    }).sort({
-      createdAt: -1,
-    });
+    }).sort({ createdAt: -1 });
 
-    res.status(200).json({
-      orders,
-    });
+    return res.status(200).json({ orders });
   } catch (error) {
     console.error("Get my orders error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
 };
 
 // ============================================================
-// GET SINGLE ORDER
+// GET SINGLE CUSTOMER ORDER
 // ============================================================
 const getOrderById = async (req, res) => {
   try {
@@ -192,13 +183,11 @@ const getOrderById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      order,
-    });
+    return res.status(200).json({ order });
   } catch (error) {
     console.error("Get order error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -207,10 +196,6 @@ const getOrderById = async (req, res) => {
 // ============================================================
 // GET ALL ORDERS
 // ============================================================
-// Used by Owner Admin and Category Admins.
-// Category filtering is handled on the frontend for now.
-// Status update authorization is handled separately below.
-
 const getAllOrders = async (req, res) => {
   try {
     const adminRole = req.adminRole;
@@ -224,11 +209,8 @@ const getAllOrders = async (req, res) => {
 
     let orders;
 
-    // Owner can see every order and every item
     if (adminRole === "owner") {
-      orders = await Order.find().sort({
-        createdAt: -1,
-      });
+      orders = await Order.find().sort({ createdAt: -1 });
     } else {
       const allowedCategory = roleToCategory[adminRole];
 
@@ -238,34 +220,97 @@ const getAllOrders = async (req, res) => {
         });
       }
 
-      // Find orders containing the admin's category
       const matchingOrders = await Order.find({
         "items.category": allowedCategory,
-      }).sort({
-        createdAt: -1,
-      });
+      }).sort({ createdAt: -1 });
 
-      // Return only items belonging to that category
       orders = matchingOrders.map((order) => {
         const orderObject = order.toObject();
 
-       orderObject.items = orderObject.items
-  .map((item, originalIndex) => ({
-    ...item,
-    originalIndex,
-  }))
-  .filter((item) => item.category === allowedCategory);
+        orderObject.items = orderObject.items
+          .map((item, originalIndex) => ({
+            ...item,
+            originalIndex,
+          }))
+          .filter(
+            (item) => item.category === allowedCategory
+          );
+
         return orderObject;
       });
     }
 
-    res.status(200).json({
-      orders,
-    });
+    return res.status(200).json({ orders });
   } catch (error) {
     console.error("Get all orders error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+// ============================================================
+// GET SINGLE ORDER FOR ADMIN
+// ============================================================
+const getAdminOrderById = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      orderId: req.params.orderId,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    const roleToCategory = {
+      sweets: "Sweets",
+      fastfood: "Fast Food",
+      snacks: "Snacks",
+      beverages: "Beverages",
+    };
+
+    // Owner can view the complete order.
+    if (req.adminRole === "owner") {
+      return res.status(200).json({ order });
+    }
+
+    // Category admins can only view orders containing
+    // their assigned category, and only those items.
+    const allowedCategory = roleToCategory[req.adminRole];
+
+    if (!allowedCategory) {
+      return res.status(403).json({
+        message: "Admin role is not authorized",
+      });
+    }
+
+    const orderObject = order.toObject();
+
+    orderObject.items = orderObject.items
+      .map((item, originalIndex) => ({
+        ...item,
+        originalIndex,
+      }))
+      .filter(
+        (item) => item.category === allowedCategory
+      );
+
+    if (orderObject.items.length === 0) {
+      return res.status(403).json({
+        message: "You are not authorized to view this order",
+      });
+    }
+
+    return res.status(200).json({
+      order: orderObject,
+    });
+  } catch (error) {
+    console.error("Get admin order error:", error);
+
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -274,18 +319,6 @@ const getAllOrders = async (req, res) => {
 // ============================================================
 // UPDATE ORDER STATUS
 // ============================================================
-// Owner can update any order.
-//
-// Category Admins:
-// sweets     -> Sweets
-// fastfood   -> Fast Food
-// snacks     -> Snacks
-// beverages  -> Beverages
-//
-// Category Admins can only update orders containing
-// items from their own category.
-// ============================================================
-
 const updateOrderStatus = async (req, res) => {
   try {
     const { status, itemIndex } = req.body;
@@ -321,7 +354,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // OWNER: Update the entire order
+    // OWNER: Update the entire order.
     if (adminRole === "owner") {
       order.status = status;
 
@@ -331,8 +364,9 @@ const updateOrderStatus = async (req, res) => {
 
       await order.save();
 
-      // Send notification only for meaningful progress updates
-      if (["Preparing", "Ready", "Completed"].includes(status)) {
+      if (
+        ["Preparing", "Ready", "Completed"].includes(status)
+      ) {
         try {
           const customerAccount = await Customer.findById(
             order.customerId
@@ -367,7 +401,7 @@ Thank you for ordering from Shree Ladli Sweets & Snacks!`
       });
     }
 
-    // CATEGORY ADMIN: Update only an authorized item
+    // CATEGORY ADMIN: Update only an authorized item.
     const allowedCategory = roleToCategory[adminRole];
 
     if (!allowedCategory) {
@@ -404,7 +438,6 @@ Thank you for ordering from Shree Ladli Sweets & Snacks!`
 
     selectedItem.status = status;
 
-    // Calculate overall order status
     const itemStatuses = order.items.map(
       (item) => item.status || "Pending"
     );
@@ -438,8 +471,9 @@ Thank you for ordering from Shree Ladli Sweets & Snacks!`
 
     await order.save();
 
-    // Notify the customer about the updated item
-    if (["Preparing", "Ready", "Completed"].includes(status)) {
+    if (
+      ["Preparing", "Ready", "Completed"].includes(status)
+    ) {
       try {
         const customerAccount = await Customer.findById(
           order.customerId
@@ -486,16 +520,9 @@ Thank you for ordering from Shree Ladli Sweets & Snacks!`
 // ============================================================
 // GET ORDER ANALYTICS
 // ============================================================
-// Used by Owner Dashboard only.
-// ============================================================
 const getOrderAnalytics = async (req, res) => {
   try {
-    // Get all orders
     const orders = await Order.find();
-
-    // ==========================================
-    // OVERALL ORDER ANALYTICS
-    // ==========================================
 
     const totalOrders = orders.length;
 
@@ -515,17 +542,12 @@ const getOrderAnalytics = async (req, res) => {
       (order) => order.status === "Completed"
     ).length;
 
-  // Revenue from completed orders only
-const totalRevenue = orders
-  .filter((order) => order.status === "Completed")
-  .reduce(
-    (total, order) => total + Number(order.total || 0),
-    0
-  );
-
-    // ==========================================
-    // CATEGORY ANALYTICS
-    // ==========================================
+    const totalRevenue = orders
+      .filter((order) => order.status === "Completed")
+      .reduce(
+        (total, order) => total + Number(order.total || 0),
+        0
+      );
 
     const categories = [
       "Sweets",
@@ -535,14 +557,12 @@ const totalRevenue = orders
     ];
 
     const categoryAnalytics = categories.map((category) => {
-      // Orders containing this category
       const categoryOrders = orders.filter((order) =>
         order.items?.some(
           (item) => item.category === category
         )
       );
 
-      // Revenue from completed orders for this category
       const categoryRevenue = orders
         .filter((order) => order.status === "Completed")
         .reduce((total, order) => {
@@ -565,11 +585,7 @@ const totalRevenue = orders
       };
     });
 
-    // ==========================================
-    // SEND RESPONSE
-    // ==========================================
-
-    res.status(200).json({
+    return res.status(200).json({
       analytics: {
         totalOrders,
         pendingOrders,
@@ -580,15 +596,15 @@ const totalRevenue = orders
         categoryAnalytics,
       },
     });
-
   } catch (error) {
     console.error("Get order analytics error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
 };
+
 // ============================================================
 // EXPORT CONTROLLERS
 // ============================================================
@@ -597,6 +613,7 @@ module.exports = {
   getMyOrders,
   getOrderById,
   getAllOrders,
+  getAdminOrderById,
   updateOrderStatus,
   getOrderAnalytics,
 };

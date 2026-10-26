@@ -1,5 +1,5 @@
-const express = require("express");
 
+const express = require("express");
 const router = express.Router();
 
 const {
@@ -7,12 +7,12 @@ const {
   getMyOrders,
   getOrderById,
   getAllOrders,
+  getAdminOrderById,
   updateOrderStatus,
   getOrderAnalytics,
 } = require("../controllers/orderController");
 
 const authMiddleware = require("../middleware/authMiddleware");
-
 const adminAuthMiddleware = require("../middleware/adminAuthMiddleware");
 
 const ownerOnly = (req, res, next) => {
@@ -24,30 +24,39 @@ const ownerOnly = (req, res, next) => {
 
   next();
 };
+
 // Create a new order
 router.post("/", authMiddleware, createOrder);
 
-// Get only the logged-in customer's orders
+// Get the logged-in customer's orders
 router.get("/my-orders", authMiddleware, getMyOrders);
 
 // Get all orders for admin
 router.get("/admin/all", adminAuthMiddleware, getAllOrders);
 
-router.patch(
-  "/admin/:orderId/status",
-  adminAuthMiddleware,
-  updateOrderStatus
-);
-// Get a specific order
-
+// Get order analytics (owner only)
 router.get(
   "/admin/analytics",
   adminAuthMiddleware,
   ownerOnly,
   getOrderAnalytics
 );
+
+// Get one order for admin
+router.get(
+  "/admin/:orderId",
+  adminAuthMiddleware,
+  getAdminOrderById
+);
+
+// Update order status
+router.patch(
+  "/admin/:orderId/status",
+  adminAuthMiddleware,
+  updateOrderStatus
+);
+
+// Get one order for the logged-in customer
 router.get("/:orderId", authMiddleware, getOrderById);
-
-
 
 module.exports = router;
