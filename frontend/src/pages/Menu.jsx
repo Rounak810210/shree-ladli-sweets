@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import API_BASE_URL from "../config/api";
-import productData from "../data/product";
+import localProducts from "../data/product";
 
 const categories = [
   { name: "All", icon: "⭐" },
