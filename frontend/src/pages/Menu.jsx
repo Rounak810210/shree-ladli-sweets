@@ -46,13 +46,23 @@ const imageByName = new Map(
   ])
 );
 
-const fixedProducts = apiProducts.map((product) => ({
-  ...product,
-  image:
-    imageByName.get(
-      String(product.name || "").trim().toLowerCase()
-    ) || product.image,
-}));
+const imageAliases = {
+  "rasmalai special": "rasmalai",
+  "kaju barffi special": "kaju katli",
+};
+
+const fixedProducts = apiProducts.map((product) => {
+  const productName = String(product.name || "")
+    .trim()
+    .toLowerCase();
+
+  const localName = imageAliases[productName] || productName;
+
+  return {
+    ...product,
+    image: imageByName.get(localName) || product.image,
+  };
+});
 
 setMenuProducts(fixedProducts);
       } catch (error) {
