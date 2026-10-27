@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import API_BASE_URL from "../config/api";
+import productData from "../data/product";
 
 const categories = [
   { name: "All", icon: "⭐" },
@@ -34,9 +35,26 @@ function Menu() {
           throw new Error(data.message || "Unable to load products");
         }
 
-        setMenuProducts(
-          Array.isArray(data.products) ? data.products : []
-        );
+       const apiProducts = Array.isArray(data.products)
+  ? data.products
+  : [];
+
+const imageByName = new Map(
+  localProducts.map((item) => [
+    item.name.trim().toLowerCase(),
+    item.image,
+  ])
+);
+
+const fixedProducts = apiProducts.map((product) => ({
+  ...product,
+  image:
+    imageByName.get(
+      String(product.name || "").trim().toLowerCase()
+    ) || product.image,
+}));
+
+setMenuProducts(fixedProducts);
       } catch (error) {
         console.error("Error loading products:", error);
         setLoadError(true);
